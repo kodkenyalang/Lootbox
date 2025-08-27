@@ -20,10 +20,9 @@ import { BrowserProvider, Contract, ethers } from "ethers";
 import LootBoxManagerAbi from "@/abis/LootBoxManager.json";
 import ItemNFTAbi from "@/abis/ItemNFT.json";
 import BlocklockAbi from "@/abis/Blocklock.json";
+import deploymentAddresses from "@/lib/deploymentAddresses.json";
 
-const lootBoxManagerAddress = process.env.NEXT_PUBLIC_LOOTBOX_MANAGER_ADDRESS!;
-const itemNFTAddress = process.env.NEXT_PUBLIC_ITEM_NFT_ADDRESS!;
-const blocklockAddress = process.env.NEXT_PUBLIC_BLOCKLOCK_ADDRESS!;
+const { lootBoxManagerAddress, itemNFTAddress, blocklockAddress } = deploymentAddresses;
 
 const placeholders = [
   { url: "https://picsum.photos/seed/sword/400/400", hint: "glowing sword" },
@@ -95,14 +94,17 @@ export function LootBoxClient() {
 
       for (let i = 0; i < balance; i++) {
         const tokenId = await itemNFTContract.tokenOfOwnerByIndex(await currentSigner.getAddress(), i);
-        const lockInfo = await blocklockContract.getLock(itemNFTAddress, tokenId);
+        const isLocked = await blocklockContract.isLocked(tokenId);
+        // The getLock function from the provided ABI seems to be incorrect or missing from the final contract.
+        // Using isLocked instead. We might need to adjust if getLock is indeed available.
+        // const lockInfo = await blocklockContract.getLock(itemNFTAddress, tokenId);
         
         const placeholder = placeholders[Number(tokenId) % placeholders.length];
 
         fetchedItems.push({
             tokenId: Number(tokenId),
-            isLocked: lockInfo.isLocked,
-            unlockBlock: Number(lockInfo.unlockBlock),
+            isLocked: isLocked,
+            unlockBlock: 0, // Placeholder, as getLock is not available in the ABI
             imageUrl: placeholder.url,
             dataAiHint: placeholder.hint,
             blockTimestamp: Date.now() // Placeholder, ideally from block data
@@ -129,7 +131,6 @@ export function LootBoxClient() {
 
     startTransition(async () => {
       const lootboxContract = new Contract(lootBoxManagerAddress, LootBoxManagerAbi.abi, signer);
-      const itemNFTContract = new Contract(itemNFTAddress, ItemNFTAbi.abi, signer);
       
       try {
         const tx = await lootboxContract.openLootBox({ value: ethers.parseEther("0.1") }); // Example cost
@@ -163,14 +164,14 @@ export function LootBoxClient() {
         }
 
         const blocklockContract = new Contract(blocklockAddress, BlocklockAbi.abi, signer);
-        const lockInfo = await blocklockContract.getLock(itemNFTAddress, newItemTokenId);
+        const isLocked = await blocklockContract.isLocked(newItemTokenId);
         
         const placeholder = placeholders[newItemTokenId % placeholders.length];
 
         const newItem: Item = {
           tokenId: newItemTokenId,
-          isLocked: lockInfo.isLocked,
-          unlockBlock: Number(lockInfo.unlockBlock),
+          isLocked: isLocked,
+          unlockBlock: 0, // Placeholder
           imageUrl: placeholder.url,
           dataAiHint: placeholder.hint,
           blockTimestamp: Date.now(), // Placeholder

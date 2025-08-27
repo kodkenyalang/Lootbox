@@ -1,0 +1,5 @@
+{
+  "lootBoxManagerAddress": "YOUR_LOOTBOX_MANAGER_ADDRESS",
+  "itemNFTAddress": "YOUR_ITEM_NFT_ADDRESS",
+  "blocklockAddress": "YOUR_BLOCKLOCK_ADDRESS"
+}
