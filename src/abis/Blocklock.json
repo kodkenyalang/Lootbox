@@ -1,0 +1,5 @@
+{
+    "abi": [
+        "function getLock(address token, uint256 tokenId) view returns ((bool isLocked, uint256 unlockBlock, address initiator))"
+    ]
+}

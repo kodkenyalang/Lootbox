@@ -1,0 +1,6 @@
+{
+  "abi": [
+    "function openLootBox() payable",
+    "function itemNFT() view returns (address)"
+  ]
+}

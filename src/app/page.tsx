@@ -1,9 +1,7 @@
-import { getItems } from "@/app/actions";
 import { LootBoxClient } from "@/components/lootbox-client";
 import { Gem } from "lucide-react";
 
-export default async function Home() {
-  const initialItems = await getItems();
+export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col items-center p-4 sm:p-8 md:p-12 bg-background font-body">
@@ -19,7 +17,7 @@ export default async function Home() {
         </p>
       </header>
       
-      <LootBoxClient initialItems={initialItems} />
+      <LootBoxClient />
     </main>
   );
 }
