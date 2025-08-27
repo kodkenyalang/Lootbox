@@ -8,12 +8,19 @@ export type Item = {
   unlockBlock: number;
   imageUrl: string;
   dataAiHint: string;
+  blockTimestamp: number;
 };
 
 // WARNING: This is a mock in-memory store. Data will be lost on server restart.
 let inventory: Item[] = [];
 let nextTokenId = 1;
-let currentBlock = 1000; 
+
+// Mock function to get the current block number
+async function getCurrentBlockNumber() {
+    // In a real scenario, this would interact with a blockchain.
+    // For this mock, we'll simulate a slowly increasing block number.
+    return 1000 + Math.floor(Date.now() / 10000); 
+}
 
 const placeholders = [
   { url: "https://picsum.photos/seed/sword/400/400", hint: "glowing sword" },
@@ -34,18 +41,18 @@ if (inventory.length === 0) {
     unlockBlock: 0,
     imageUrl: initialPlaceholder.url,
     dataAiHint: initialPlaceholder.hint,
+    blockTimestamp: Date.now(),
   });
 }
 
 export async function getItems(): Promise<Item[]> {
   await new Promise((resolve) => setTimeout(resolve, 500));
-  currentBlock += 1;
   return inventory;
 }
 
 export async function openLootBox(): Promise<Item> {
   await new Promise((resolve) => setTimeout(resolve, 2000));
-  currentBlock += Math.floor(Math.random() * 3) + 1;
+  const currentBlock = await getCurrentBlockNumber();
 
   const pseudoRandom = Math.random();
   const isLocked = pseudoRandom <= 0.2; // 20% chance
@@ -58,6 +65,7 @@ export async function openLootBox(): Promise<Item> {
     unlockBlock: isLocked ? currentBlock + RARE_ITEM_LOCK_DURATION_IN_BLOCKS : 0,
     imageUrl: placeholder.url,
     dataAiHint: placeholder.hint,
+    blockTimestamp: Date.now(),
   };
 
   nextTokenId++;
