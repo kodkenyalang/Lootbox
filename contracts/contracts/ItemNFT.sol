@@ -12,6 +12,7 @@ interface IBlocklock {
 /**
  * @title ItemNFT
  * @notice An ERC721 token that checks with the Blocklock contract before allowing transfers.
+ * @dev THIS VERSION IS CORRECT FOR OPENZEPPELIN v5.x
  */
 contract ItemNFT is ERC721, Ownable {
     IBlocklock public immutable blocklock;
@@ -35,20 +36,21 @@ contract ItemNFT is ERC721, Ownable {
     }
 
     /**
-     * @dev Hook that is called before any token transfer.
-     * This is where we enforce the lock.
+     * @dev Hook that is called before any token transfer in OpenZeppelin v5.x.
+     * This replaces _beforeTokenTransfer from v4.x.
      */
-    function _beforeTokenTransfer(
-        address from,
+    function _update(
         address to,
         uint256 tokenId,
-        uint256 batchSize
-    ) internal override {
-        super._beforeTokenTransfer(from, to, tokenId, batchSize);
-
-        // A mint operation is a transfer from address(0). We don't want to block minting.
+        address auth
+    ) internal override returns (address) {
+        address from = _ownerOf(tokenId);
+        
+        // A mint operation is when from is address(0). We don't want to block minting.
         if (from != address(0)) {
             require(!blocklock.isLocked(tokenId), "ItemNFT: Token is locked and cannot be transferred");
         }
+        
+        return super._update(to, tokenId, auth);
     }
 }

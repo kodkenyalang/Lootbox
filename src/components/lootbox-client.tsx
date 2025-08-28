@@ -95,9 +95,6 @@ export function LootBoxClient() {
       for (let i = 0; i < balance; i++) {
         const tokenId = await itemNFTContract.tokenOfOwnerByIndex(await currentSigner.getAddress(), i);
         const isLocked = await blocklockContract.isLocked(tokenId);
-        // The getLock function from the provided ABI seems to be incorrect or missing from the final contract.
-        // Using isLocked instead. We might need to adjust if getLock is indeed available.
-        // const lockInfo = await blocklockContract.getLock(itemNFTAddress, tokenId);
         
         const placeholder = placeholders[Number(tokenId) % placeholders.length];
 
@@ -133,7 +130,7 @@ export function LootBoxClient() {
       const lootboxContract = new Contract(lootBoxManagerAddress, LootBoxManagerAbi.abi, signer);
       
       try {
-        const tx = await lootboxContract.openLootBox({ value: ethers.parseEther("0.1") }); // Example cost
+        const tx = await lootboxContract.openBox();
         
         toast({
             title: "Transaction Sent",
@@ -144,12 +141,13 @@ export function LootBoxClient() {
 
         // Find the event from the transaction receipt
         let newItemTokenId = -1;
-        const transferEventInterface = new ethers.Interface(ItemNFTAbi.abi);
+        const lootBoxEventInterface = new ethers.Interface(LootBoxManagerAbi.abi);
+
         if (receipt.logs) {
             for (const log of receipt.logs) {
                 try {
-                    const parsedLog = transferEventInterface.parseLog(log);
-                    if (parsedLog && parsedLog.name === "Transfer" && parsedLog.args.to === account) {
+                    const parsedLog = lootBoxEventInterface.parseLog(log);
+                    if (parsedLog && parsedLog.name === "LootBoxOpened" && parsedLog.args.user === account) {
                         newItemTokenId = Number(parsedLog.args.tokenId);
                         break;
                     }

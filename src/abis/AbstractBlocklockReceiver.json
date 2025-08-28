@@ -1,3 +1,17 @@
 {
-    "abi": []
+  "abi": [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_blocklockAddress",
+          "type": "address"
+        }
+      ],
+      "name": "setBlocklockAddress",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ]
 }

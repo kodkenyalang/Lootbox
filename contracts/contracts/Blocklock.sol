@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.28;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./AbstractBlocklockReceiver.sol";
@@ -9,11 +9,13 @@ import "./AbstractBlocklockReceiver.sol";
  * @notice Manages time-based locks on assets based on block numbers.
  * Only the owner (the LootBoxManager contract) can set locks.
  */
-contract Blocklock is AbstractBlocklockReceiver, Ownable {
+contract Blocklock is AbstractBlocklockReceiver {
     // Mapping from a token ID to the block number it unlocks at.
     mapping(uint256 => uint256) private _lockedUntilBlock;
 
-    constructor(address initialOwner) Ownable(initialOwner) {}
+    constructor(address blocklockSender)
+        AbstractBlocklockReceiver(blocklockSender)
+    {}
 
     /**
      * @inheritdoc AbstractBlocklockReceiver

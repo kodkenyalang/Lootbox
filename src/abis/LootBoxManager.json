@@ -1,6 +1,10 @@
 {
   "abi": [
-    "function openLootBox() payable",
-    "function itemNFT() view returns (address)"
+    "constructor(address _itemNFTAddress, address _blocklockAddress, address _userAddress)",
+    "function openBox() external",
+    "event LootBoxOpened(address indexed user, uint256 indexed tokenId, bool wasLocked)",
+    "function itemNFT() view returns (address)",
+    "function blocklock() view returns (address)",
+    "function userAddress() view returns (address)"
   ]
 }

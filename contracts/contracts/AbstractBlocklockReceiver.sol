@@ -1,11 +1,17 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "@openzeppelin/contracts/access/Ownable.sol";
+
 /**
  * @title AbstractBlocklockReceiver
  * @notice An abstract contract that other contracts can inherit from to receive blocklocks.
  */
-abstract contract AbstractBlocklockReceiver {
+abstract contract AbstractBlocklockReceiver is Ownable {
+    constructor(address blocklockSender)
+        Ownable(msg.sender)
+    {}
+
     /**
      * @notice Sets a lock for a given token ID until a specific block number.
      * @param _tokenId The unique identifier of the item to be locked.
