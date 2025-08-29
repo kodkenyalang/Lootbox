@@ -1,11 +1,11 @@
-//New
+
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
 import type { Item } from "@/app/actions";
 import { Button } from "@/components/ui/button";
 import { ItemCard } from "@/components/item-card";
-import { Box, Loader2, Sparkles, Wallet } from "lucide-react";
+import { Box, Loader2, Sparkles, Wallet, AlertTriangle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -15,26 +15,19 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 import { BrowserProvider, Contract, ethers } from "ethers";
 
-import LootBoxManagerAbi from "@/abis/LootBoxManager.json";
-import ItemNFTAbi from "@/abis/ItemNFT.json";
+import IntegratedLootBoxAbi from "@/abis/IntegratedLootBox.json";
 import BlocklockAbi from "@/abis/Blocklock.json";
 import deploymentAddresses from "@/lib/deploymentAddresses.json";
 
-const { lootBoxManagerAddress, itemNFTAddress, blocklockAddress } = deploymentAddresses;
+const { integratedLootBoxAddress, blocklockAddress } = deploymentAddresses;
 
-const placeholders = [
-  { url: "https://picsum.photos/seed/sword/400/400", hint: "glowing sword" },
-  { url: "https://picsum.photos/seed/shield/400/400", hint: "ornate shield" },
-  { url: "https://picsum.photos/seed/helmet/400/400", hint: "viking helmet" },
-  { url: "https://picsum.photos/seed/potion/400/400", hint: "magic potion" },
-  { url: "https://picsum.photos/seed/gem/400/400", hint: "crystal gem" },
-  { url: "https://picsum.photos/seed/amulet/400/400", hint: "ancient amulet" },
-  { url: "https://picsum.photos/seed/ring/400/400", hint: "magic ring" },
-  { url: "https://picsum.photos/seed/staff/400/400", hint: "wizard staff" },
-];
+const areContractsDeployed = 
+    integratedLootBoxAddress && !integratedLootBoxAddress.includes("YOUR_") &&
+    blocklockAddress && !blocklockAddress.includes("YOUR_");
 
 export function LootBoxClient() {
   const [items, setItems] = useState<Item[]>([]);
@@ -43,6 +36,7 @@ export function LootBoxClient() {
   const [provider, setProvider] = useState<BrowserProvider | null>(null);
   const [signer, setSigner] = useState<ethers.Signer | null>(null);
   const [account, setAccount] = useState<string | null>(null);
+  const [currentBlock, setCurrentBlock] = useState<number>(0);
 
   const { toast } = useToast();
 
@@ -85,37 +79,59 @@ export function LootBoxClient() {
     }
   };
 
-  const getItems = async (currentSigner: ethers.Signer) => {
-      if(!currentSigner) return;
-      const itemNFTContract = new Contract(itemNFTAddress, ItemNFTAbi.abi, currentSigner);
-      const blocklockContract = new Contract(blocklockAddress, BlocklockAbi.abi, currentSigner);
-      
-      const balance = await itemNFTContract.balanceOf(await currentSigner.getAddress());
-      const fetchedItems: Item[] = [];
-
-      for (let i = 0; i < balance; i++) {
-        const tokenId = await itemNFTContract.tokenOfOwnerByIndex(await currentSigner.getAddress(), i);
-        const isLocked = await blocklockContract.isLocked(tokenId);
+  const getItems = async (currentSigner: ethers.Signer, currentProvider: BrowserProvider) => {
+    if (!areContractsDeployed) return;
+    const lootboxContract = new Contract(integratedLootBoxAddress, IntegratedLootBoxAbi.abi, currentSigner);
+    const blocklockContract = new Contract(blocklockAddress, BlocklockAbi.abi, currentSigner);
+    
+    try {
+        const address = await currentSigner.getAddress();
+        const balance = await lootboxContract.balanceOf(address);
+        const latestBlock = await currentProvider.getBlock("latest");
+        const currentBlockNumber = latestBlock ? latestBlock.number : 0;
+        setCurrentBlock(currentBlockNumber);
         
-        const placeholder = placeholders[Number(tokenId) % placeholders.length];
+        // This is a simplified way to fetch items. 
+        // A robust implementation would use events or a subgraph.
+        const fetchedItems: Item[] = [];
+        const balanceNum = Number(balance);
+        for (let i = 0; i < balanceNum; i++) {
+            // Note: This contract does not have `tokenOfOwnerByIndex`, so this approach is not possible.
+            // We must rely on listening to `LootBoxOpened` events.
+            // The logic here will mainly refresh existing items.
+        }
 
-        fetchedItems.push({
-            tokenId: Number(tokenId),
-            isLocked: isLocked,
-            unlockBlock: 0, // Placeholder, as getLock is not available in the ABI
-            imageUrl: placeholder.url,
-            dataAiHint: placeholder.hint,
-            blockTimestamp: Date.now() // Placeholder, ideally from block data
+        const updatedItems = await Promise.all(items.map(async (item) => {
+            const isLocked = await blocklockContract.isLocked(item.tokenId);
+            let unlockBlock = item.unlockBlock;
+            if (isLocked) {
+              try {
+                const lock = await blocklockContract.getLock(item.tokenId);
+                unlockBlock = Number(lock);
+              } catch (e) {
+                console.warn("Could not retrieve lock for token:", item.tokenId);
+              }
+            }
+            return { ...item, isLocked, unlockBlock };
+        }));
+
+        setItems(updatedItems.sort((a, b) => b.tokenId - a.tokenId));
+    } catch (error) {
+        console.error("Error fetching items:", error);
+        toast({
+            variant: "destructive",
+            title: "Error Fetching Items",
+            description: "Could not fetch your item collection.",
         });
-      }
-      setItems(fetchedItems.reverse());
-  }
+    }
+  };
+
 
   useEffect(() => {
-    if(signer) {
-        getItems(signer);
+    if(signer && provider && areContractsDeployed) {
+        getItems(signer, provider);
     }
-  }, [signer])
+  }, [signer, provider]);
 
   const handleOpenBox = () => {
     if (!signer || !provider) {
@@ -128,10 +144,10 @@ export function LootBoxClient() {
     }
 
     startTransition(async () => {
-      const lootboxContract = new Contract(lootBoxManagerAddress, LootBoxManagerAbi.abi, signer);
+      const lootboxContract = new Contract(integratedLootBoxAddress, IntegratedLootBoxAbi.abi, signer);
       
       try {
-        const tx = await lootboxContract.openBox();
+        const tx = await lootboxContract.requestLootBoxOpen();
         
         toast({
             title: "Transaction Sent",
@@ -140,59 +156,91 @@ export function LootBoxClient() {
 
         const receipt = await tx.wait();
 
-        // Find the event from the transaction receipt
-        let newItemTokenId = -1;
-        const lootBoxEventInterface = new ethers.Interface(LootBoxManagerAbi.abi);
-
-        if (receipt.logs) {
-            for (const log of receipt.logs) {
-                try {
-                    const parsedLog = lootBoxEventInterface.parseLog(log);
-                    if (parsedLog && parsedLog.name === "LootBoxOpened" && parsedLog.args.user === account) {
-                        newItemTokenId = Number(parsedLog.args.tokenId);
-                        break;
+        const eventTopic = lootboxContract.interface.getEvent("LootBoxOpened");
+        if (receipt.logs && eventTopic) {
+            const event = receipt.logs
+                .map((log: any) => {
+                    try {
+                        const parsedLog = lootboxContract.interface.parseLog(log);
+                        if (parsedLog?.name === 'LootBoxOpened' && parsedLog.args.user === account) {
+                            return parsedLog;
+                        }
+                    } catch (e) {
+                        return null;
                     }
-                } catch(e) {
-                    // ignore, not the right event
+                    return null;
+                })
+                .find((log): log is ethers.LogDescription => log !== null);
+
+            if (event) {
+                const { tokenId, wasLocked } = event.args;
+                const latestBlock = await provider.getBlock("latest");
+                const currentBlockNumber = latestBlock?.number ?? 0;
+                
+                let unlockBlock = 0;
+                if (wasLocked) {
+                    const blocklockContract = new Contract(blocklockAddress, BlocklockAbi.abi, signer);
+                    try {
+                        unlockBlock = Number(await blocklockContract.getLock(tokenId));
+                    } catch(e) {
+                        console.error("Could not get lock for new item");
+                        // Fallback based on contract constant
+                        unlockBlock = currentBlockNumber + 50; 
+                    }
                 }
+
+                const newItem: Item = {
+                    tokenId: Number(tokenId),
+                    isLocked: wasLocked,
+                    unlockBlock: unlockBlock,
+                    imageUrl: `https://picsum.photos/400/400?random=${Number(tokenId)}`,
+                    dataAiHint: wasLocked ? 'rare treasure' : 'common item',
+                    blockTimestamp: latestBlock?.timestamp ?? 0,
+                };
+
+                setRevealedItem(newItem);
+                setItems(prev => [newItem, ...prev.filter(i => i.tokenId !== newItem.tokenId)].sort((a,b) => b.tokenId - a.tokenId));
+                 toast({
+                    title: "Success!",
+                    description: `You found Item #${newItem.tokenId}!`,
+                });
+            } else {
+                 toast({
+                    variant: "destructive",
+                    title: "Event not found",
+                    description: "Could not find the LootBoxOpened event for your address in the transaction.",
+                });
             }
+        } else {
+             toast({
+                variant: "destructive",
+                title: "No logs in receipt",
+                description: "The transaction receipt did not contain any event logs.",
+            });
         }
-        
-        if (newItemTokenId === -1) {
-            throw new Error("Could not find the new item token ID in the transaction receipt.");
-        }
-
-        const blocklockContract = new Contract(blocklockAddress, BlocklockAbi.abi, signer);
-        const isLocked = await blocklockContract.isLocked(newItemTokenId);
-        
-        const placeholder = placeholders[newItemTokenId % placeholders.length];
-
-        const newItem: Item = {
-          tokenId: newItemTokenId,
-          isLocked: isLocked,
-          unlockBlock: 0, // Placeholder
-          imageUrl: placeholder.url,
-          dataAiHint: placeholder.hint,
-          blockTimestamp: Date.now(), // Placeholder
-        };
-
-        setRevealedItem(newItem);
-        setItems(prevItems => [newItem, ...prevItems]);
-        toast({
-            title: "Success!",
-            description: `You've found item #${newItemTokenId}!`,
-        });
-
       } catch (error: any) {
+        const errorMessage = error.reason || "An unexpected error occurred. Please check the console.";
         toast({
           variant: "destructive",
           title: "Error Opening Box",
-          description: error.reason || "Something went wrong. Please try again.",
+          description: errorMessage,
         });
         console.error("Open loot box error:", error);
       }
     });
   };
+
+  if (!areContractsDeployed) {
+    return (
+        <Alert variant="destructive" className="w-full max-w-2xl mx-auto my-12">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Contracts Not Deployed</AlertTitle>
+            <AlertDescription>
+                The application is not configured with smart contract addresses. Please deploy your contracts and update the <code className="font-mono bg-muted px-1 py-0.5 rounded">src/lib/deploymentAddresses.json</code> file.
+            </AlertDescription>
+        </Alert>
+    )
+  }
 
   return (
     <div className="w-full max-w-5xl">
