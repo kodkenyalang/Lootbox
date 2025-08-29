@@ -1,5 +1,4 @@
 {
-  "lootBoxManagerAddress": "YOUR_LOOTBOX_MANAGER_ADDRESS",
-  "itemNFTAddress": "YOUR_ITEM_NFT_ADDRESS",
-  "blocklockAddress": "YOUR_BLOCKLOCK_ADDRESS"
+  "integratedLootBoxAddress": "0x7803069b233830640878Cb3e14643d7cB4B3040F",
+  "blocklockAddress": "0xF00aB3B64c81b6Ce51f8220EB2bFaa2D469cf702"
 }
