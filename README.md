@@ -1,6 +1,8 @@
 # LootBox dApp
 
-LootBox is a decentralized application (dApp) that allows users to open "loot boxes" on the Filecoin Calibration testnet. Each box contains an NFT, with a chance to receive a rare, time-locked item. This project leverages the Filecoin Virtual Machine (FVM) for smart contract execution and demonstrates a simple, single-transaction loot box mechanism.
+LootBox is a decentralized application (dApp) that allows users to open "loot boxes" on the Filecoin Calibration testnet. Each box contains a unique NFT, with a chance to receive a rare, time-locked item. This project leverages the Filecoin Virtual Machine (FVM) for smart contract execution and features a fully integrated ERC721 contract (`IntegratedLootBox.sol`) that manages minting, ownership, and the loot box mechanism in a single transaction.
+
+This dApp leverages Randamu's open-source tools (RandomnessReceiver and BlocklockReceiver) to integrate provable fairness and create sustained user engagement through on-chain, time-locked assets.
 
 This project was built with Next.js, Hardhat, Ethers.js, and shadcn/ui.
 
@@ -8,10 +10,10 @@ This project was built with Next.js, Hardhat, Ethers.js, and shadcn/ui.
 
 ## Core Features
 
--   **One-Click Loot Box**: A single transaction on the Filecoin network handles the entire process of opening a loot box and receiving an NFT.
--   **On-Chain Randomness**: A portable pseudo-randomness implementation determines the contents of each loot box.
--   **Time-Locked Rare Items**: Rare NFTs are minted in a "locked" state using a `Blocklock` smart contract, making them non-transferable for a set number of blocks.
--   **Web3 Wallet Integration**: Connects with MetaMask to manage user identity and sign transactions.
+-   **Single-Contract System**: The `IntegratedLootBox` contract handles the entire process of opening a loot box, minting, and receiving an NFT in one transaction.
+-   **On-Chain Pseudo-Randomness**: A portable pseudo-randomness implementation determines the contents of each loot box.
+-   **Time-Locked Rare Items**: Rare NFTs are minted in a "locked" state using a separate `Blocklock` smart contract, making them non-transferable for a set number of blocks.
+-   **Web3 Wallet Integration**: Connects with MetaMask to manage user identity and sign transactions on the Filecoin network.
 -   **Filecoin Calibration Network**: All smart contract interactions occur on the public Filecoin Calibration testnet.
 
 ## Project Structure
@@ -19,9 +21,9 @@ This project was built with Next.js, Hardhat, Ethers.js, and shadcn/ui.
 ```
 .
 ├── contracts/              # Solidity smart contracts
-│   ├── Blocklock.sol
-│   ├── ItemNFT.sol
-│   └── LootBoxManager.sol
+│   ├── BlocklockReceiver.sol
+│   ├── RandomnessReceiver.sol
+│   └── IntegratedLootBox.sol
 ├── public/                 # Static assets
 ├── scripts/                # Deployment scripts
 │   └── deploy.ts
@@ -76,25 +78,24 @@ FILECOIN_CALIBRATION_RPC_URL="YOUR_RPC_URL"
 
 ### 4. Deploy the Smart Contracts
 
-The `LootBoxManager` contract depends on the `ItemNFT` and `Blocklock` contracts. You must deploy them first.
+The `IntegratedLootBox` contract depends on an externally deployed `Blocklock` contract.
 
-**a. Deploy `ItemNFT` and `Blocklock`:**
+**a. Deploy LootBoxManager:**
 
 You will need to write and run deployment scripts for these contracts. You can create new files in the `scripts/` directory (e.g., `deploy-item-nft.ts`). After deploying them, you need to update `src/lib/deploymentAddresses.json` with their addresses.
 
 **b. Update `deploymentAddresses.json`:**
 
-Open `src/lib/deploymentAddresses.json` and replace the placeholder addresses with your deployed contract addresses.
+Open `src/lib/deploymentAddresses.json` and replace the placeholder `blocklockAddress` with your deployed contract address.
 
 ```json
 {
-  "lootBoxManagerAddress": "YOUR_LOOTBOX_MANAGER_ADDRESS",
-  "itemNFTAddress": "0xYourItemNFTContractAddress...",
+  "integratedLootBoxAddress": "YOUR_INTEGRATED_LOOTBOX_ADDRESS",
   "blocklockAddress": "0xYourBlocklockContractAddress..."
 }
 ```
 
-**c. Compile All Contracts:**
+**c. Compile the `IntegratedLootBox` Contract**
 
 ```bash
 npm run compile
@@ -102,7 +103,7 @@ npm run compile
 
 This command uses Hardhat to compile all contracts in the `contracts/` directory and places the artifacts (bytecode and ABI) in `src/artifacts/`.
 
-**d. Deploy `LootBoxManager`:**
+**d. Deploy `IntegratedLootBox`:**
 
 Now, run the deployment script for the main contract:
 
@@ -110,7 +111,7 @@ Now, run the deployment script for the main contract:
 npm run deploy
 ```
 
-This script will deploy `LootBoxManager` to the Filecoin Calibration testnet and automatically update `src/lib/deploymentAddresses.json` with its new address.
+This script will deploy `IntegratedLootBox` to the Filecoin Calibration testnet and automatically update `src/lib/deploymentAddresses.json` with its new address.
 
 ### 5. Run the Application
 
